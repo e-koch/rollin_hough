@@ -18,4 +18,4 @@ Requires
 
 Build Status
 ------------
-[Build Status](https://travis-ci.org/e-koch/rollin_hough.svg?branch=master)
+[![Build Status](https://travis-ci.org/e-koch/rollin_hough.svg?branch=master)](https://travis-ci.org/e-koch/rollin_hough)
