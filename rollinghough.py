@@ -82,59 +82,25 @@ def rht(mask, radius, ntheta=180, background_percentile=25, verbose=False):
     if (R < 0.0).any():
         R[R < 0.0] = 0.0  # Ignore negative values after subtraction
 
-    # Return to [0, pi] interval and position to the correct zero point.
-    theta -= np.pi/2
-    R = np.roll(R, (ntheta/2))
+    # Return to [-pi/2, pi/2] interval and position to the correct zero point.
+    theta -= np.pi
+    R = np.fliplr(R[:, np.newaxis])
 
-    # Smooth R to get better minimum, quantile values.
-    smooth_R = gaussian_filter1d(R, 2, mode="wrap")
-
-    # Now we want to set the position to "start" the distribution at
-    # We look for minima (or near minima) in the distribution,
-    # then see if any are sequentially in line
-    # The position used is the median of the longest sequence
-    mins = np.where(smooth_R == smooth_R.min())[0]
-    five_percent = np.where(smooth_R <= scoreatpercentile(smooth_R, 5))[0]
-
-    check = True
-    while check:
-        if mins.shape[0] > 1:
-            continuous_sections = []
-            for _, g in groupby(enumerate(mins), lambda (i, x): i-x):
-                continuous_sections.append(map(itemgetter(1), g))
-            try:
-                section = max(continuous_sections, key=len)
-                zero_posn = int(np.median(section))
-                check = False
-            except ValueError:
-                # If there are no groups, use the bottom 5 percentile.
-                mins = five_percent
-        else:  # If there is only one minimum, use bottom 5 percentile.
-            mins = five_percent
-
-    theta = np.roll(theta, -zero_posn)
-    R = np.roll(R, -zero_posn)
-    smooth_R = np.roll(smooth_R, -zero_posn)
-
-    # Make ecdf
-    ecdf = np.cumsum(smooth_R/np.sum(smooth_R))
-
-    # Use ecdf to find median and quantiles.
-    median = np.median(theta[np.where(ecdf == find_nearest(ecdf, 0.5))])
-    twofive = np.median(theta[np.where(ecdf == find_nearest(ecdf, 0.25))])
-    sevenfive = np.median(theta[np.where(ecdf == find_nearest(ecdf, 0.75))])
-    quantiles = (twofive, median, sevenfive)
+    mean_circ = circ_mean(theta, weights=R)
+    twofive, sevenfive = list(circ_CI(theta, weights=R, u_ci=0.67))
+    quantiles = (twofive, mean_circ, sevenfive)
 
     if verbose:
         p.subplot(1, 2, 1, polar=True)
-        p.plot(theta, R, "rD")
-        p.plot([theta[zero_posn]]*2, [0, R.max()], "k")
-        p.plot(theta, smooth_R, "b")
+        p.plot(2*theta, R, "rD")
+        p.plot([2*mean_circ]*2, [0, R.max()], "k")
+        p.plot([2*twofive]*2, [0, R.max()], "r")
+        p.plot([2*sevenfive]*2, [0, R.max()], "r")
         p.subplot(1, 2, 2)
         p.imshow(mask, cmap="binary")
         p.show()
 
-    return theta, R, ecdf, quantiles
+    return theta, R, quantiles
 
 
 def circular_region(radius):
@@ -174,3 +140,82 @@ def padwithnans(vector, pad_width, iaxis, kwargs):
 def find_nearest(array, value):
     idx = (np.abs(array-value)).argmin()
     return array[idx]
+
+
+def find_nearest_posn(array, value):
+    idx = (np.abs(array-value)).argmin()
+    return idx
+
+
+def circ_mean(theta, weights=None):
+    """
+    Calculates the median of a set of angles on the circle and returns
+    a value on the interval from (-pi, pi].  Angles expected in radians.
+
+    Parameters
+    ----------
+    """
+
+    if len(theta.shape) == 1:
+        theta = theta[:, np.newaxis]
+
+    if weights is None:
+        weights = np.ones(theta.shape)
+
+    medangle = np.arctan2(np.nansum(np.sin(2*theta) * weights),
+                          np.nansum(np.cos(2*theta) * weights))
+
+    medangle /= 2.0
+
+    return medangle
+
+
+def circ_CI(theta, weights=None, u_ci=0.67, axis=0):
+    '''
+
+    '''
+
+    if len(theta.shape) == 1:
+        theta = theta[:, np.newaxis]
+
+    if weights is None:
+        weights = np.ones(theta.shape)
+    else:
+        if len(weights.shape) == 1:
+            weights = weights[:, np.newaxis]
+
+    assert theta.shape == weights.shape
+
+    # Normalize weights
+    weights /= np.sum(weights, axis=axis)
+
+    mean_ang = circ_mean(theta, weights=weights)
+
+    # Now center the data around the mean to find the CI intervals
+    mean_posn = find_nearest_posn(theta, mean_ang)
+
+    diff_posn = -1 * (theta.shape[0]/2 - mean_posn)
+
+    theta_copy = np.roll(theta, diff_posn)
+
+    vec_length2 = np.sum(weights * np.cos(theta_copy), axis=axis) + \
+        np.sum(weights * np.sin(theta_copy), axis=axis)
+
+    alpha = np.sum(weights * np.cos(2*theta_copy), axis=axis) / \
+        np.sum(weights, axis=axis)
+
+    var_w = np.sum(weights * (1 - alpha)) / \
+        (4 * np.sum(weights) * vec_length2)
+
+    # Make sure the CI stays within the interval. Otherwise assign it to
+    # pi/2 (largest possible on interval of pi)
+    sin_arg = u_ci * np.sqrt(2 * var_w)
+
+    if sin_arg <= 1:
+        ci = np.arcsin(sin_arg)
+    else:
+        ci = np.pi / 2.
+
+    samp_cis = np.vstack([mean_ang - ci, mean_ang + ci])
+
+    return samp_cis
