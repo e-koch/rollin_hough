@@ -7,10 +7,7 @@ See  Clark et al. 2013 for description
 
 import numpy as np
 from scipy.stats import scoreatpercentile
-from scipy.ndimage import gaussian_filter1d
 import matplotlib.pyplot as p
-from operator import itemgetter
-from itertools import groupby
 
 
 def rht(mask, radius, ntheta=180, background_percentile=25, verbose=False):
@@ -52,7 +49,7 @@ def rht(mask, radius, ntheta=180, background_percentile=25, verbose=False):
     # The theta=0 case isn't handled properly
     theta = np.linspace(np.pi/2., 1.5*np.pi, ntheta)
 
-    ## Create a cube of all angle positions
+    # Create a cube of all angle positions
     circle, mesh = circular_region(radius)
     circles_cube = np.empty((ntheta, circle.shape[0], circle.shape[1]))
     for posn, ang in enumerate(theta):
