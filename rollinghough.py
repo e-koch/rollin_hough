@@ -87,7 +87,9 @@ def rht(mask, radius, ntheta=180, background_percentile=25, verbose=False):
     R = np.fliplr(R[:, np.newaxis])
 
     mean_circ = circ_mean(theta, weights=R)
-    twofive, sevenfive = list(circ_CI(theta, weights=R, u_ci=0.67))
+    twofive, sevenfive = circ_CI(theta, weights=R, u_ci=0.67)
+    twofive = twofive[0]
+    sevenfive = sevenfive[0]
     quantiles = (twofive, mean_circ, sevenfive)
 
     if verbose:
