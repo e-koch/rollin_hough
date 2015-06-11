@@ -1,5 +1,8 @@
 rollin_hough
 ============
+[![DOI](https://zenodo.org/badge/doi/10.5281/zenodo.18497.svg)](http://dx.doi.org/10.5281/zenodo.18497)
+
+[![Build Status](https://travis-ci.org/e-koch/rollin_hough.svg?branch=master)](https://travis-ci.org/e-koch/rollin_hough)
 
 Python implementation of the Rolling Hough Transform
 
@@ -8,14 +11,8 @@ This method varies from the original by allowing for the distribution to begin a
 
 This code is used in [fil_finder](https://github.com/e-koch/fil_finder) to find the direction of filaments on the plane.
 
-
 Requires
 --------
 *   numpy
 *   scipy
 *   matplotlib
-
-
-Build Status
-------------
-[![Build Status](https://travis-ci.org/e-koch/rollin_hough.svg?branch=master)](https://travis-ci.org/e-koch/rollin_hough)
