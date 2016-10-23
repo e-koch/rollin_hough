@@ -38,9 +38,13 @@ def rht(mask, radius, ntheta=180, background_percentile=25, verbose=False):
 
     theta : numpy.ndarray
             Angles transform was performed at.
-
     R : numpy.ndarray
         Transform output.
+    quantiles : tuple
+        The 16th percentile, circular mean, and 84 percentile (around 1-sigma
+        about the median).
+    theta_arr : np.ndarray
+        Transform mean angles for each pixel in the given mask.
 
     '''
 
@@ -59,13 +63,25 @@ def rht(mask, radius, ntheta=180, background_percentile=25, verbose=False):
 
     R = np.zeros((ntheta,))
     x, y = np.where(mask != 0.0)
+    theta_arr = np.zeros_like(mask, dtype=np.float)
     for i, j in zip(x, y):
         region = np.tile(circle * pad_mask[i:i+2*radius+1,
                                            j:j+2*radius+1], (ntheta, 1, 1))
         line = region * np.isclose(circles_cube, 0.0)
 
         if not np.isnan(line).all():
-            R = R + np.nansum(np.nansum(line, axis=2), axis=1)
+
+            line_sum = np.nansum(np.nansum(line, axis=2), axis=1)
+
+            theta_arr[i, j] = circ_mean(theta - np.pi, weights=line_sum)
+
+            R = R + line_sum
+
+        else:
+            theta_arr[i, j] = np.NaN
+
+    # Set all none skeleton pixels in theta_arr to NaN
+    theta_arr[~mask] = np.NaN
 
     # Check that the ends are close.
     if np.isclose(R[0], R[-1], rtol=1.0):
@@ -99,7 +115,7 @@ def rht(mask, radius, ntheta=180, background_percentile=25, verbose=False):
         p.imshow(mask, cmap="binary", origin='lower')
         p.show()
 
-    return theta, R, quantiles
+    return theta, R, quantiles, theta_arr
 
 
 def circular_region(radius):
@@ -155,11 +171,11 @@ def circ_mean(theta, weights=None):
     ----------
     """
 
-    if len(theta.shape) == 1:
-        theta = theta[:, np.newaxis]
-
     if weights is None:
         weights = np.ones(theta.shape)
+
+    if len(theta.shape) == 1 and len(weights.shape) != 1:
+        theta = theta[:, np.newaxis]
 
     medangle = np.arctan2(np.nansum(np.sin(2*theta) * weights),
                           np.nansum(np.cos(2*theta) * weights))
