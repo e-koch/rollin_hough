@@ -51,13 +51,13 @@ def rht(mask, radius, ntheta=180, background_percentile=25, verbose=False):
     pad_mask = np.pad(mask.astype(float), radius, padwithnans)
 
     # The theta=0 case isn't handled properly
-    theta = np.linspace(np.pi/2., 1.5*np.pi, ntheta)
+    theta = np.linspace(np.pi / 2., 1.5 * np.pi, ntheta)
 
     # Create a cube of all angle positions
     circle, mesh = circular_region(radius)
     circles_cube = np.empty((ntheta, circle.shape[0], circle.shape[1]))
     for posn, ang in enumerate(theta):
-        diff = mesh[0]*np.sin(ang) - mesh[1]*np.cos(ang)
+        diff = mesh[0] * np.sin(ang) - mesh[1] * np.cos(ang)
         diff[np.where(np.abs(diff) < 1.0)] = 0
         circles_cube[posn, :, :] = diff
 
@@ -65,8 +65,9 @@ def rht(mask, radius, ntheta=180, background_percentile=25, verbose=False):
     x, y = np.where(mask != 0.0)
     theta_arr = np.zeros_like(mask, dtype=np.float)
     for i, j in zip(x, y):
-        region = np.tile(circle * pad_mask[i:i+2*radius+1,
-                                           j:j+2*radius+1], (ntheta, 1, 1))
+        region = np.tile(circle * pad_mask[i:i + 2 * radius + 1,
+                                           j:j + 2 * radius + 1],
+                         (ntheta, 1, 1))
         line = region * np.isclose(circles_cube, 0.0)
 
         if not np.isnan(line).all():
@@ -107,10 +108,10 @@ def rht(mask, radius, ntheta=180, background_percentile=25, verbose=False):
 
     if verbose:
         p.subplot(1, 2, 1, polar=True)
-        p.plot(2*theta, R, "rD")
-        p.plot([2*mean_circ]*2, [0, R.max()], "k")
-        p.plot([2*twofive]*2, [0, R.max()], "r")
-        p.plot([2*sevenfive]*2, [0, R.max()], "r")
+        p.plot(2 * theta, R, "rD")
+        p.plot([2 * mean_circ] * 2, [0, R.max()], "k")
+        p.plot([2 * twofive] * 2, [0, R.max()], "r")
+        p.plot([2 * sevenfive] * 2, [0, R.max()], "r")
         p.subplot(1, 2, 2)
         p.imshow(mask, cmap="binary", origin='lower')
         p.show()
@@ -135,7 +136,7 @@ def circular_region(radius):
     [xx, yy] : numpy.ndarray
         Grids used to create the circle.
     '''
-    xx, yy = np.mgrid[-radius:radius+1, -radius:radius+1]
+    xx, yy = np.mgrid[-radius:radius + 1, -radius:radius + 1]
 
     circle = xx**2. + yy**2.
     circle = circle < radius**2.
@@ -153,12 +154,12 @@ def padwithnans(vector, pad_width, iaxis, kwargs):
 
 
 def find_nearest(array, value):
-    idx = (np.abs(array-value)).argmin()
+    idx = (np.abs(array - value)).argmin()
     return array[idx]
 
 
 def find_nearest_posn(array, value):
-    idx = (np.abs(array-value)).argmin()
+    idx = (np.abs(array - value)).argmin()
     return idx
 
 
@@ -177,8 +178,8 @@ def circ_mean(theta, weights=None):
     if len(theta.shape) == 1 and len(weights.shape) != 1:
         theta = theta[:, np.newaxis]
 
-    medangle = np.arctan2(np.nansum(np.sin(2*theta) * weights),
-                          np.nansum(np.cos(2*theta) * weights))
+    medangle = np.arctan2(np.nansum(np.sin(2 * theta) * weights),
+                          np.nansum(np.cos(2 * theta) * weights))
 
     medangle /= 2.0
 
@@ -209,14 +210,14 @@ def circ_CI(theta, weights=None, u_ci=0.67, axis=0):
     # Now center the data around the mean to find the CI intervals
     mean_posn = find_nearest_posn(theta, mean_ang)
 
-    diff_posn = -1 * (theta.shape[0]/2 - mean_posn)
+    diff_posn = -1 * (theta.shape[0] / 2 - mean_posn)
 
     theta_copy = np.roll(theta, diff_posn)
 
     vec_length2 = np.sum(weights * np.cos(theta_copy), axis=axis)**2. + \
         np.sum(weights * np.sin(theta_copy), axis=axis)**2.
 
-    alpha = np.sum(weights * np.cos(2*theta_copy), axis=axis)
+    alpha = np.sum(weights * np.cos(2 * theta_copy), axis=axis)
 
     var_w = (1 - alpha) / (4 * vec_length2)
 
