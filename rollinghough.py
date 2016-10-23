@@ -5,6 +5,8 @@ See  Clark et al. 2013 for description
 
 '''
 
+from __future__ import print_function, absolute_import, division
+
 import numpy as np
 from scipy.stats import scoreatpercentile
 import matplotlib.pyplot as p
@@ -82,7 +84,7 @@ def rht(mask, radius, ntheta=180, background_percentile=25, verbose=False):
             theta_arr[i, j] = np.NaN
 
     # Set all none skeleton pixels in theta_arr to NaN
-    theta_arr[~mask] = np.NaN
+    theta_arr[mask == 0.0] = np.NaN
 
     # Check that the ends are close.
     if np.isclose(R[0], R[-1], rtol=1.0):
@@ -210,7 +212,7 @@ def circ_CI(theta, weights=None, u_ci=0.67, axis=0):
     # Now center the data around the mean to find the CI intervals
     mean_posn = find_nearest_posn(theta, mean_ang)
 
-    diff_posn = -1 * (theta.shape[0] / 2 - mean_posn)
+    diff_posn = -1 * (theta.shape[0] // 2 - mean_posn)
 
     theta_copy = np.roll(theta, diff_posn)
 
